@@ -1,0 +1,11 @@
+services:
+  db:
+    ports:
+      - 5438:5432
+    container_name: postgresql_products
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=products-api
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_USER=admin
