@@ -14,6 +14,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 @RestController
 
 public class ProductController {
@@ -30,7 +33,14 @@ public class ProductController {
 
     @GetMapping("/products")
     public ResponseEntity<List<ProductModel>> getAllProduct() {
-        return ResponseEntity.status(HttpStatus.OK).body(productRepository.findAll());
+        List<ProductModel> productList = productRepository.findAll();
+        if (!productList.isEmpty()) {
+            for (ProductModel product : productList) {
+                UUID id = product.getIdProduct();
+                product.add(linkTo(methodOn(ProductController.class).getOneProduct(id)).withSelfRel());
+            }
+        }
+        return ResponseEntity.status(HttpStatus.OK).body(productList);
     }
 
     @GetMapping("/products/{id}")
@@ -39,7 +49,30 @@ public class ProductController {
         if (product0.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not Found.");
         }
+        product0.get().add(linkTo(methodOn(ProductController.class).getAllProduct()).withRel("Products List"));
         return ResponseEntity.status(HttpStatus.OK).body(product0.get());
+    }
+
+    @PutMapping("/products/{id}")
+    public ResponseEntity<Object> updateProduct(@PathVariable(value = "id") UUID id, @RequestBody @Valid ProductRecordDto productRecordDto) {
+        Optional<ProductModel> product0 = productRepository.findById(id);
+        if (product0.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found");
+        }
+        var productModel = product0.get();
+        BeanUtils.copyProperties(productRecordDto, productModel);
+        return ResponseEntity.status(HttpStatus.OK).body(productRepository.save(productModel));
+    }
+
+    @DeleteMapping("/products/{id}")
+    public ResponseEntity<Object> deleteProduct(@PathVariable(value = "id") UUID id) {
+        Optional<ProductModel> product0 = productRepository.findById(id);
+        if (product0.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found.");
+
+        }
+        productRepository.delete(product0.get());
+        return ResponseEntity.status(HttpStatus.OK).body("Product deleted successfully.");
 
     }
 }
